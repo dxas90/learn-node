@@ -1,11 +1,57 @@
 {
-  "name": "learn",
+  "name": "learn-node",
   "version": "1.0.0",
-  "description": "A test for learn",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
+  "description": "A modern Node.js microservice for learning containerization and Kubernetes deployment",
+  "main": "main.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   },
-  "author": "Daniel Ramirez",
-  "license": "ISC"
+  "scripts": {
+    "start": "node main.js",
+    "dev": "nodemon main.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint *.js",
+    "lint:fix": "eslint *.js --fix",
+    "format": "prettier --write *.js",
+    "docker:build": "docker build -t learn-node .",
+    "docker:run": "docker run -p 3000:3000 learn-node",
+    "k8s:deploy": "kubectl apply -f k8s/",
+    "health-check": "curl -f http://localhost:3000/healthz || exit 1"
+  },
+  "keywords": [
+    "nodejs",
+    "microservice",
+    "kubernetes",
+    "docker",
+    "containerization",
+    "openshift",
+    "devops"
+  ],
+  "author": "Daniel Ramirez <dxas90@gmail.com>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.1",
+    "@eslint/js": "^9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dxas90/learn-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dxas90/learn-node/issues"
+  },
+  "homepage": "https://github.com/dxas90/learn-node#readme"
 }

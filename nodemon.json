@@ -1,0 +1,12 @@
+{
+  "watch": ["main.js"],
+  "ext": "js,json",
+  "ignore": ["node_modules/", "coverage/", "*.test.js"],
+  "exec": "node main.js",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "colours": true,
+  "legacyWatch": false,
+  "delay": "1000"
+}

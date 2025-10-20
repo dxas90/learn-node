@@ -1,0 +1,47 @@
+# Prettier ignore patterns
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.*
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Documentation (if you want to exclude)
+CHANGELOG.md
+LICENSE
+
+# Specific files that shouldn't be formatted
+*.min.js
+*.min.css
