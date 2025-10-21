@@ -89,10 +89,10 @@ clean:
 	@echo -e "$(BLUE)Cleaning build artifacts...$(RESET)"
 	rm -rf node_modules coverage *.tgz .nyc_output dist build
 	@if command -v docker > /dev/null 2>&1; then \
-		echo "$(BLUE)Cleaning Docker artifacts...$(RESET)"; \
-		docker system prune -f || echo "$(YELLOW)Warning: Could not clean Docker artifacts$(RESET)"; \
+		echo -e "$(BLUE)Cleaning Docker artifacts...$(RESET)"; \
+		docker system prune -f || echo -e "$(YELLOW)Warning: Could not clean Docker artifacts$(RESET)"; \
 	else \
-		echo "$(YELLOW)Docker not available, skipping Docker cleanup$(RESET)"; \
+		echo -e "$(YELLOW)Docker not available, skipping Docker cleanup$(RESET)"; \
 	fi
 
 ## Run the application locally
@@ -124,17 +124,34 @@ docker-run:
 ## Start application with Docker Compose
 docker-compose:
 	@echo -e "$(BLUE)Starting services with Docker Compose...$(RESET)"
-	docker-compose up --build
+	@if [ -f "docker-compose.yml" ] || [ -f "docker-compose.yaml" ]; then \
+		docker-compose up --build; \
+	else \
+		echo -e "$(YELLOW)No docker-compose.yml file found$(RESET)"; \
+		echo -e "$(YELLOW)Use 'make docker-run' to run the container directly$(RESET)"; \
+	fi
 
 ## Stop Docker Compose services
 docker-compose-down:
 	@echo -e "$(BLUE)Stopping Docker Compose services...$(RESET)"
-	docker-compose down -v
+	@if [ -f "docker-compose.yml" ] || [ -f "docker-compose.yaml" ]; then \
+		docker-compose down -v; \
+	else \
+		echo -e "$(YELLOW)No docker-compose.yml file found$(RESET)"; \
+	fi
 
 ## Deploy to Kubernetes using kubectl
 k8s-deploy:
 	@echo -e "$(BLUE)Deploying to Kubernetes...$(RESET)"
-	kubectl apply -f k8s/
+	@if [ -f "k8s/Chart.yaml" ] || [ -f "k8s/learn-node/Chart.yaml" ]; then \
+		echo -e "$(YELLOW)Detected Helm chart. Use 'make helm-deploy' instead$(RESET)"; \
+		exit 1; \
+	elif [ -d "k8s" ] && [ "$$(find k8s -name '*.yaml' -o -name '*.yml' | grep -v Chart.yaml | wc -l)" -gt 0 ]; then \
+		kubectl apply -f k8s/ --recursive; \
+	else \
+		echo -e "$(YELLOW)No Kubernetes manifests found. Use 'make helm-deploy' for Helm deployment$(RESET)"; \
+		exit 1; \
+	fi
 
 ## Deploy using Helm
 helm-deploy:
@@ -144,12 +161,22 @@ helm-deploy:
 ## Remove Kubernetes deployment
 k8s-undeploy:
 	@echo -e "$(BLUE)Removing Kubernetes deployment...$(RESET)"
-	kubectl delete -f k8s/
+	@if [ -d "k8s" ] && [ "$$(find k8s -name '*.yaml' -o -name '*.yml' | wc -l)" -gt 0 ]; then \
+		kubectl delete -f k8s/ --recursive; \
+	else \
+		echo -e "$(YELLOW)No Kubernetes manifests found in k8s/ directory$(RESET)"; \
+		echo -e "$(YELLOW)Use 'helm uninstall $(APP_NAME)' for Helm-based removal$(RESET)"; \
+	fi
 
 ## Run security scan with Trivy
 security:
 	@echo -e "$(BLUE)Running security scan...$(RESET)"
-	trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+	@if command -v trivy > /dev/null 2>&1; then \
+		trivy fs --exit-code 1 --severity HIGH,CRITICAL .; \
+	else \
+		echo -e "$(YELLOW)Trivy not installed, running npm audit instead...$(RESET)"; \
+		npm audit --audit-level=high; \
+	fi
 
 ## Run code quality checks
 lint: install
@@ -212,7 +239,7 @@ update:
 ## Check for outdated packages
 outdated:
 	@echo -e "$(BLUE)Checking for outdated packages...$(RESET)"
-	npm outdated
+	npm outdated || true
 
 ## Quick start - install, test, and run locally
 quick-start: clean install test run

@@ -1,7 +1,5 @@
 import http from 'http';
 import { URL } from 'url';
-import helmet from 'helmet';
-import cors from 'cors';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -34,9 +32,13 @@ const applyMiddleware = (req, res) => {
 };
 
 // Logging middleware
-const logRequest = (req) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.url} - User-Agent: ${req.headers['user-agent'] || 'Unknown'}`);
+const logRequest = req => {
+  if (process.env.NODE_ENV !== 'test') {
+    const timestamp = new Date().toISOString();
+    console.log(
+      `[${timestamp}] ${req.method} ${req.url} - User-Agent: ${req.headers['user-agent'] || 'Unknown'}`
+    );
+  }
 };
 
 // Error handler
@@ -128,41 +130,55 @@ const routes = {
 };
 
 // Create HTTP server
-const server = http.createServer((req, res) => {
-  try {
-    // Log request
-    logRequest(req);
+export const createApp = () => {
+  return http.createServer((req, res) => {
+    try {
+      // Log request
+      logRequest(req);
 
-    // Apply middleware
-    applyMiddleware(req, res);
+      // Apply middleware
+      applyMiddleware(req, res);
 
-    // Handle OPTIONS request for CORS
-    if (req.method === 'OPTIONS') {
-      res.statusCode = 204;
-      res.end();
-      return;
+      // Handle OPTIONS request for CORS
+      if (req.method === 'OPTIONS') {
+        res.statusCode = 204;
+        res.end();
+        return;
+      }
+
+      // Parse URL
+      const urlObj = new URL(req.url, `http://${req.headers.host}`);
+      const pathname = urlObj.pathname;
+
+      // Route handling
+      if (routes[pathname] && req.method === 'GET') {
+        routes[pathname](req, res);
+      } else if (req.method !== 'GET') {
+        sendError(
+          res,
+          405,
+          'Method Not Allowed',
+          `Method ${req.method} is not allowed for this endpoint`
+        );
+      } else {
+        sendError(
+          res,
+          404,
+          'Not Found',
+          `The endpoint ${pathname} does not exist or you are not authorized to view it.`
+        );
+      }
+    } catch (error) {
+      console.error('Server error:', error);
+      sendError(res, 500, 'Internal Server Error', error.message);
     }
+  });
+};
 
-    // Parse URL
-    const urlObj = new URL(req.url, `http://${req.headers.host}`);
-    const pathname = urlObj.pathname;
-
-    // Route handling
-    if (routes[pathname] && req.method === 'GET') {
-      routes[pathname](req, res);
-    } else if (req.method !== 'GET') {
-      sendError(res, 405, 'Method Not Allowed', `Method ${req.method} is not allowed for this endpoint`);
-    } else {
-      sendError(res, 404, 'Not Found', `The endpoint ${pathname} does not exist or you are not authorized to view it.`);
-    }
-  } catch (error) {
-    console.error('Server error:', error);
-    sendError(res, 500, 'Internal Server Error', error.message);
-  }
-});
+const server = createApp();
 
 // Graceful shutdown handling
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = signal => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
 
   server.close(() => {
@@ -182,7 +198,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   console.error('Uncaught Exception:', error);
   process.exit(1);
 });
@@ -192,10 +208,12 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-// Start server
-server.listen(port, hostname, () => {
-  console.log(`🚀 Server running at http://${hostname}:${port}/`);
-  console.log(`📊 Environment: ${appInfo.environment}`);
-  console.log(`📦 Version: ${appInfo.version}`);
-  console.log(`🕐 Started at: ${appInfo.timestamp}`);
-});
+// Start server only if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  server.listen(port, hostname, () => {
+    console.log(`🚀 Server running at http://${hostname}:${port}/`);
+    console.log(`📊 Environment: ${appInfo.environment}`);
+    console.log(`📦 Version: ${appInfo.version}`);
+    console.log(`🕐 Started at: ${appInfo.timestamp}`);
+  });
+}

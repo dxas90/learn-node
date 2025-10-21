@@ -35,16 +35,19 @@ export default [
 
       // Variables
       'no-undef': 'error',
-      'no-unused-vars': ['error', {
-        'argsIgnorePattern': '^_',
-        'varsIgnorePattern': '^_'
-      }],
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_'
+        }
+      ],
       'no-use-before-define': 'error',
 
       // Stylistic Issues
-      'indent': ['error', 2],
-      'quotes': ['error', 'single'],
-      'semi': ['error', 'always'],
+      indent: ['error', 2],
+      quotes: ['error', 'single'],
+      semi: ['error', 'always'],
       'comma-dangle': ['error', 'never'],
       'no-trailing-spaces': 'error',
       'eol-last': 'error',
@@ -60,12 +63,7 @@ export default [
       'handle-callback-err': 'error'
     },
     files: ['**/*.js'],
-    ignores: [
-      'node_modules/**',
-      'coverage/**',
-      'dist/**',
-      '*.min.js'
-    ]
+    ignores: ['node_modules/**', 'coverage/**', 'dist/**', '*.min.js']
   },
   {
     // Test files specific configuration

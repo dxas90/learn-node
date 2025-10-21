@@ -1,0 +1,85 @@
+replicaCount: 1
+
+image:
+  repository: "dxas90/learn-node"
+  pullPolicy: "IfNotPresent"
+  tag: "latest"
+
+service:
+  type: "ClusterIP"
+  port: 3000
+
+namespace: "default"
+
+httproute:
+  enabled: False
+  gatewayName: "gateway"
+  gatewayNamespace: "gateway-system"
+  hostnames:
+    - "example.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - port: 3000
+
+persistence:
+  enabled: False
+  capacity: "8Mi"
+  mountPath: "/data"
+
+autoscaling:
+  enabled: False
+  minReplicas: 1
+  maxReplicas: 10
+
+resources:
+  limits:
+    cpu: 1m
+    memory: 56Mi
+  requests:
+    cpu: 1m
+    memory: 56Mi
+
+chart:
+  label: "learn-node"
+
+# Environment configuration
+env:
+  # Environment variables from file will be loaded here during chart generation
+  # if env_file_path is provided in cookiecutter.json
+  variables: {}
+
+# Other values from the original chart are intentionally left as defaults.
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  fsGroup: 65534
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 3
+  failureThreshold: 2
+
+readinessProbe:
+  tcpSocket:
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
