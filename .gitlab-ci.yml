@@ -59,7 +59,7 @@ test:
   stage: test
   image: node:20-alpine
   services:
-    - docker:24-dind
+    - docker:28-dind
   variables:
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
@@ -90,7 +90,7 @@ security-scan:
   stage: security
   image: aquasec/trivy:latest
   services:
-    - docker:24-dind
+    - docker:28-dind
   variables:
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
@@ -116,9 +116,9 @@ security-scan:
 # Build and push Docker image
 build:
   stage: build
-  image: docker:24
+  image: docker:28
   services:
-    - docker:24-dind
+    - docker:28-dind
   variables:
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
