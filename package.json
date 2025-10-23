@@ -34,7 +34,7 @@
   "author": "Daniel Ramirez <dxas90@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
-    "helmet": "^7.1.0",
+    "helmet": "^8.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1"
   },
