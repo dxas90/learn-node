@@ -1,5 +1,5 @@
 # Multi-stage build for optimization
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 
 # Install security updates and create non-root user
 RUN apk update && apk upgrade && \
