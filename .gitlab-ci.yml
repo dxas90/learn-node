@@ -40,7 +40,7 @@ before_script:
 # Code quality and linting
 lint:
   stage: lint
-  image: node:22-alpine
+  image: node:24-alpine
   before_script:
     - npm ci
   script:
@@ -57,7 +57,7 @@ lint:
 # Unit and integration tests
 test:
   stage: test
-  image: node:22-alpine
+  image: node:24-alpine
   services:
     - docker:28-dind
   variables:
