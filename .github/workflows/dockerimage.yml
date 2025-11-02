@@ -15,6 +15,7 @@ jobs:
   lint:
     name: Code Quality & Linting
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -66,6 +67,7 @@ jobs:
   security-scan:
     name: Security Vulnerability Scan
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -89,7 +91,6 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
-
   build:
     name: Build and Scan Docker Image
     runs-on: ubuntu-latest

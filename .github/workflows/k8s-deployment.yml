@@ -12,35 +12,39 @@ env:
   CLUSTER_NAME: test-cluster
 
 jobs:
-  validate-k8s:
-    name: Validate Kubernetes Manifests
+  helm-test:
+    name: Helm Chart Testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Setup kubeval
-        run: |
-          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
-          tar xf kubeval-linux-amd64.tar.gz
-          sudo mv kubeval /usr/local/bin
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
 
-      - name: Validate Kubernetes manifests
-        run: |
-          if [ -d "k8s" ]; then
-            kubeval k8s/*.yaml
-          else
-            echo "No k8s directory found, creating basic manifests..."
-            mkdir -p k8s
-          fi
+      - name: Install Helm unittest plugin
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git
+
+      - name: Run Helm unit tests
+        run: helm unittest k8s/learn-node
+
+      - name: Lint Helm chart
+        run: helm lint k8s/learn-node
 
   test-deployment:
     name: Test Kubernetes Deployment
     runs-on: ubuntu-latest
-    needs: validate-k8s
+    needs: helm-test
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
 
       - name: Setup Kind Cluster
         uses: helm/kind-action@v1
@@ -73,79 +77,25 @@ jobs:
           echo "=== Services (all namespaces) ==="
           kubectl get services --all-namespaces -o wide
 
-      - name: Create basic Kubernetes manifests if not exist
+      - name: Deploy application using Helm
         run: |
-          if [ ! -f "k8s/deployment.yaml" ]; then
-            mkdir -p k8s
-            cat > k8s/deployment.yaml << 'EOF'
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: learn-node
-            labels:
-              app: learn-node
-          spec:
-            replicas: 2
-            selector:
-              matchLabels:
-                app: learn-node
-            template:
-              metadata:
-                labels:
-                  app: learn-node
-              spec:
-                containers:
-                - name: learn-node
-                  image: learn-node:test
-                  imagePullPolicy: Never
-                  ports:
-                  - containerPort: 3000
-                  env:
-                  - name: NODE_ENV
-                    value: "production"
-                  - name: PORT
-                    value: "3000"
-                  livenessProbe:
-                    httpGet:
-                      path: /healthz
-                      port: 3000
-                    initialDelaySeconds: 10
-                    periodSeconds: 30
-                  readinessProbe:
-                    httpGet:
-                      path: /healthz
-                      port: 3000
-                    initialDelaySeconds: 5
-                    periodSeconds: 10
-          ---
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: learn-node-service
-            labels:
-              app: learn-node
-          spec:
-            type: ClusterIP
-            ports:
-            - port: 80
-              targetPort: 3000
-              protocol: TCP
-            selector:
-              app: learn-node
-          EOF
-          fi
+          echo "Deploying application with Helm..."
+          helm upgrade --install ${{ env.APP_NAME }} ./k8s/learn-node \
+            --set image.repository=${{ env.APP_NAME }} \
+            --set image.tag=test \
+            --set image.pullPolicy=Never \
+            --set replicaCount=2 \
+            --set httproute.enabled=false \
+            --wait \
+            --timeout 5m \
+            --debug
 
-      - name: Deploy application to Kind cluster
-        run: |
-          echo "Deploying application..."
-          kubectl apply -f k8s/deployment.yaml
-
-          echo "Waiting for deployment to be ready..."
-          kubectl wait --for=condition=available --timeout=300s deployment/learn-node
+          echo "=== Helm Release Status ==="
+          helm status ${{ env.APP_NAME }}
 
           echo "=== Deployment Status ==="
           kubectl get deployments
-          kubectl get pods -l app=learn-node
+          kubectl get pods -l app.kubernetes.io/name=learn-node
           kubectl get services
 
       - name: Test application endpoints
@@ -153,7 +103,8 @@ jobs:
           echo "Testing application endpoints..."
 
           # Port forward to access the service
-          kubectl port-forward service/learn-node-service 8080:80 &
+          kubectl port-forward service/${{ env.APP_NAME }} 8080:8080 &
+          PF_PID=$!
           sleep 10
 
           # Test health endpoint
@@ -170,17 +121,20 @@ jobs:
 
           echo "All endpoints are working correctly!"
 
+          # Kill port-forward
+          kill $PF_PID || true
+
       - name: Show application logs
         if: always()
         run: |
           echo "=== Application Logs ==="
-          kubectl logs -l app=learn-node --tail=50
+          kubectl logs -l app.kubernetes.io/name=learn-node --tail=50
 
       - name: Cleanup
         if: always()
         run: |
           echo "Cleaning up resources..."
-          kubectl delete -f k8s/deployment.yaml --ignore-not-found=true
+          helm uninstall ${{ env.APP_NAME }} --ignore-not-found || true
 
   deploy-staging:
     name: Deploy to Staging Environment
@@ -195,12 +149,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Deploy to staging
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Deploy to staging with Helm
         run: |
-          echo "This would deploy to your staging Kubernetes cluster"
-          # Add your staging deployment commands here
-          # Example:
-          # kubectl apply -f k8s/ --context=staging-cluster
+          echo "Deploying to staging Kubernetes cluster using Helm..."
+          # Configure kubectl context for staging
+          # kubectl config use-context staging-cluster
+
+          # Deploy using Helm
+          helm upgrade --install ${{ env.APP_NAME }} ./k8s/learn-node \
+            --namespace staging \
+            --create-namespace \
+            --set image.repository=ghcr.io/${{ github.repository }} \
+            --set image.tag=${{ github.sha }} \
+            --set image.pullPolicy=Always \
+            --set replicaCount=2 \
+            --set httproute.enabled=true \
+            --set httproute.hostnames[0]=staging.learn-node.example.com \
+            --wait \
+            --timeout 10m \
+            --debug
+
+          echo "=== Deployment Status ==="
+          helm status ${{ env.APP_NAME }} -n staging
 
   deploy-production:
     name: Deploy to Production Environment
@@ -215,9 +190,43 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Deploy to production
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Deploy to production with Helm
         run: |
-          echo "This would deploy to your production Kubernetes cluster"
-          # Add your production deployment commands here
-          # Example:
-          # kubectl apply -f k8s/ --context=production-cluster
+          echo "Deploying to production Kubernetes cluster using Helm..."
+          # Configure kubectl context for production
+          # kubectl config use-context production-cluster
+
+          # Deploy using Helm
+          helm upgrade --install ${{ env.APP_NAME }} ./k8s/learn-node \
+            --namespace production \
+            --create-namespace \
+            --set image.repository=ghcr.io/${{ github.repository }} \
+            --set image.tag=v${{ steps.version.outputs.VERSION }} \
+            --set image.pullPolicy=Always \
+            --set replicaCount=3 \
+            --set autoscaling.enabled=true \
+            --set autoscaling.minReplicas=3 \
+            --set autoscaling.maxReplicas=10 \
+            --set httproute.enabled=true \
+            --set httproute.hostnames[0]=learn-node.example.com \
+            --set resources.limits.memory=512Mi \
+            --set resources.requests.cpu=200m \
+            --set resources.requests.memory=128Mi \
+            --wait \
+            --timeout 15m \
+            --debug
+
+          echo "=== Deployment Status ==="
+          helm status ${{ env.APP_NAME }} -n production
+
+          echo "=== Rollout History ==="
+          helm history ${{ env.APP_NAME }} -n production
