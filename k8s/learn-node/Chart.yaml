@@ -2,7 +2,7 @@ apiVersion: v2
 name: "learn-node"
 description: "Helm chart for node"
 type: application
-version: "0.1.0"
-appVersion: "v0.0.12"
+version: "0.1.30" # {"$imagepolicy": "learn-node:learn-node-api-policy:tag"}
+appVersion: "0.1.30" # {"$imagepolicy": "learn-node:learn-node-api-policy:tag"}
 maintainers:
   - name: "Daniel Ramirez <dxas90@gmail.com>"

@@ -1,22 +1,27 @@
 replicaCount: 1
-
 image:
   repository: "dxas90/learn-node"
   pullPolicy: "IfNotPresent"
   tag: "latest"
-
 service:
   type: "ClusterIP"
-  port: 3000
-
+  port: 8080
+  annotations:
+    traefik.io/service.nativelb: "true"
 namespace: "default"
-
 httproute:
-  enabled: False
-  gatewayName: "gateway"
-  gatewayNamespace: "gateway-system"
+  enabled: false
+  gatewayName: "traefik-gateway"
+  gatewayNamespace: "networking"
+  sectionName: "websecure"
+  annotations:
+    networking.x-k8s.io/route-shard: "example"
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+    external-dns.alpha.kubernetes.io/target: "enter.example.com"
+  labels:
+    use-cloudflare-solver: "true"
   hostnames:
-    - "example.local"
+    - "learn-node.example.com"
   rules:
     - matches:
         - path:
@@ -24,60 +29,56 @@ httproute:
             value: /
       backendRefs:
         - port: 3000
-
 persistence:
-  enabled: False
-  capacity: "8Mi"
+  enabled: false
+  capacity: "200Mi"
   mountPath: "/data"
-
 autoscaling:
-  enabled: False
+  enabled: True
   minReplicas: 1
   maxReplicas: 10
-
 resources:
   limits:
-    cpu: 1m
-    memory: 56Mi
+    memory: 512Mi
   requests:
-    cpu: 1m
-    memory: 56Mi
-
+    cpu: 200m
+    memory: 128Mi
 chart:
   label: "learn-node"
-
 # Environment configuration
 env:
   # Environment variables from file will be loaded here during chart generation
   # if env_file_path is provided in cookiecutter.json
   variables: {}
-
+# Common secret and settings references
+common:
+  secrets:
+    enabled: false
+    name: "common-secrets"
+  settings:
+    enabled: false
+    name: "common-settings"
 # Other values from the original chart are intentionally left as defaults.
 serviceAccount:
   create: true
   automount: true
   annotations: {}
   name: ""
-
 podSecurityContext:
   fsGroup: 65534
-
 securityContext:
   capabilities:
     drop:
       - ALL
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
+  readOnlyRootFilesystem: false
   runAsUser: 1000
-
 livenessProbe:
   httpGet:
     path: /healthz
     port: http
-  initialDelaySeconds: 3
-  periodSeconds: 3
-  failureThreshold: 2
-
+  initialDelaySeconds: 5
+  periodSeconds: 4
+  failureThreshold: 5
 readinessProbe:
   tcpSocket:
     port: 8080
