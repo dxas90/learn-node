@@ -13,6 +13,10 @@ export default [
         __dirname: 'readonly',
         __filename: 'readonly',
         global: 'writable',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
         jest: 'readonly',
         describe: 'readonly',
         test: 'readonly',
@@ -70,6 +74,14 @@ export default [
     files: ['**/*.test.js', '**/*.spec.js', '**/jest.setup.js'],
     rules: {
       'no-console': 'off' // Allow console in tests
+    }
+  },
+  {
+    // Main application file - allow process.exit for graceful shutdown
+    files: ['main.js'],
+    rules: {
+      'no-process-exit': 'off',
+      'no-console': 'off' // Main file needs console for server logs
     }
   }
 ];
