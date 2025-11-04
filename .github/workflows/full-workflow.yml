@@ -289,19 +289,6 @@ jobs:
           echo "=== Services (all namespaces) ==="
           kubectl get services --all-namespaces -o wide
 
-      - name: Deploy PostgreSQL and Redis
-        run: |
-          echo "Deploying Redis..."
-          kubectl apply -f "https://raw.githubusercontent.com/dxas90/k3d-cluster/c1f4c1ebcf8751a1c4b1897bebd44cf50b948ac7/k8s/04_redis.yml"
-          echo "Waiting for Redis to be ready..."
-          kubectl wait --for=condition=Ready pod -l app=redis --timeout=120s
-          echo "Redis is ready!"
-          echo "Deploying PostgreSQL..."
-          kubectl apply -f "https://raw.githubusercontent.com/dxas90/k3d-cluster/c1f4c1ebcf8751a1c4b1897bebd44cf50b948ac7/k8s/04_postgres.yaml"
-          echo "Waiting for PostgreSQL to be ready..."
-          kubectl wait --for=condition=Ready pod -l app=postgres --timeout=120s
-          echo "PostgreSQL is ready!"
-
       - name: Deploy application using Helm
         run: |
           echo "Deploying application with Helm..."
