@@ -11,7 +11,7 @@ tests:
           value: ClusterIP
       - equal:
           path: spec.ports[0].port
-          value: 8080
+          value: 3000
       - equal:
           path: spec.ports[0].targetPort
           value: http
@@ -24,11 +24,11 @@ tests:
 
   - it: should use custom service port
     set:
-      service.port: 8080
+      service.port: 3000
     asserts:
       - equal:
           path: spec.ports[0].port
-          value: 8080
+          value: 3000
 
   - it: should create NodePort service
     set:

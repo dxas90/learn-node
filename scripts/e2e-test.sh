@@ -5,7 +5,7 @@ echo "=== Running End-to-End Tests ==="
 
 SERVICE_NAME="learn-node"
 NAMESPACE="default"
-SERVICE_PORT=8080
+SERVICE_PORT=3000
 
 # Get pod name
 POD_NAME=$(kubectl get pods -n ${NAMESPACE} -l app.kubernetes.io/name=learn-node -o jsonpath='{.items[0].metadata.name}')

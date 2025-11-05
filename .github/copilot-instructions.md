@@ -72,9 +72,9 @@ envFrom:
 
 ### Port Discrepancy Pattern
 - **Application runs on port 3000** (main.js, Dockerfile)
-- **Kubernetes Service exposes port 8080** (values.yaml line 7)
-- **Container ports**: `containerPort: 8080` in deployment.yaml (line 73)
-- Health probes target `/healthz` on `http` port (liveness) or port 8080 (readiness)
+- **Kubernetes Service exposes port 3000** (values.yaml line 7)
+- **Container ports**: `containerPort: 3000` in deployment.yaml (line 73)
+- Health probes target `/healthz` on `http` port (liveness) or port 3000 (readiness)
 
 ### Testing Approach
 ```javascript
@@ -108,7 +108,7 @@ await request(app).get('/healthz').expect(200);
 
 1. **Don't add Express**: This project intentionally uses raw `http` module
 2. **Nodemon only watches main.js**: Add files to `nodemon.json` watch array
-3. **Health endpoint mismatch**: Code uses `/healthz`, some configs reference both 3000 and 8080
+3. **Health endpoint mismatch**: Code uses `/healthz`, some configs reference both 3000 and 3000
 4. **Make targets assume Helm**: kubectl-based deployment will fail validation
 5. **ESLint no-process-exit**: Disabled only for `main.js`, don't use elsewhere
 6. **Renovate auto-merge**: Configured with `:automergeBranch` for dependency updates
@@ -117,7 +117,7 @@ await request(app).get('/healthz').expect(200);
 
 - `main.js`: Single-file server with routes object (lines 76-118)
 - `Makefile`: Lines 38-256 contain all developer workflows
-- `k8s/learn-node/values.yaml`: Service port 8080, app runs on 3000
+- `k8s/learn-node/values.yaml`: Service port 3000, app runs on 3000
 - `jest.config.js`: ES6 modules setup, 75% coverage threshold
 - `Dockerfile`: Multi-stage with labels and health check (lines 60-74)
 - `.github/workflows/full-workflow.yml`: CI pipeline with matrix testing

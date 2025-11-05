@@ -31,7 +31,7 @@ echo "Using pod: $POD_NAME"
 
 # Test health endpoint
 echo "Testing health endpoint..."
-kubectl exec -n ${NAMESPACE} ${POD_NAME} -- wget -q -O- http://localhost:8080/healthz || {
+kubectl exec -n ${NAMESPACE} ${POD_NAME} -- wget -q -O- http://localhost:3000/healthz || {
     echo "❌ Health check failed"
     exit 1
 }
