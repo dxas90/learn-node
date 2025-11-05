@@ -31,9 +31,23 @@ echo "Using pod: $POD_NAME"
 
 # Test health endpoint
 echo "Testing health endpoint..."
-kubectl exec -n ${NAMESPACE} ${POD_NAME} -- wget -q -O- http://localhost:3000/healthz || {
-    echo "❌ Health check failed"
-    exit 1
+kubectl exec -n ${NAMESPACE} ${POD_NAME} -- wget -O- http://localhost:3000/healthz 2>/dev/null || {
+    echo "❌ Health check failed with wget, trying alternative methods..."
+    # Fallback to using node itself to test the endpoint
+    kubectl exec -n ${NAMESPACE} ${POD_NAME} -- node -e "
+      const http = require('http');
+      http.get('http://localhost:3000/healthz', (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          console.log(data);
+          process.exit(res.statusCode === 200 ? 0 : 1);
+        });
+      }).on('error', () => process.exit(1));
+    " || {
+        echo "❌ Health check failed"
+        exit 1
+    }
 }
 echo "✅ Health endpoint responding"
 
