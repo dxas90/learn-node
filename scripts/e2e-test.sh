@@ -12,7 +12,25 @@ POD_NAME=$(kubectl get pods -n ${NAMESPACE} -l app.kubernetes.io/name=learn-node
 echo "Testing pod: $POD_NAME"
 
 echo "--- Test 1: Health Endpoint ---"
-HEALTH_RESPONSE=$(kubectl exec -n ${NAMESPACE} ${POD_NAME} -- wget -q -O- http://localhost:${SERVICE_PORT}/healthz)
+HEALTH_RESPONSE=$(kubectl exec -n ${NAMESPACE} ${POD_NAME} -- node -e "
+const http = require('http');
+http.get('http://localhost:${SERVICE_PORT}/healthz', (res) => {
+  let data = '';
+  res.on('data', chunk => data += chunk);
+  res.on('end', () => {
+    console.log(data);
+    process.exit(res.statusCode === 200 ? 0 : 1);
+  });
+}).on('error', (e) => {
+  console.error(e.message);
+  process.exit(1);
+});
+" 2>&1) || {
+    echo "❌ Health endpoint test failed"
+    echo "Response: $HEALTH_RESPONSE"
+    exit 1
+}
+
 if [[ "$HEALTH_RESPONSE" == *"healthy"* ]]; then
     echo "✅ Health endpoint test passed"
 else
@@ -22,7 +40,24 @@ else
 fi
 
 echo "--- Test 2: Root Endpoint ---"
-ROOT_RESPONSE=$(kubectl exec -n ${NAMESPACE} ${POD_NAME} -- wget -q -O- http://localhost:${SERVICE_PORT}/)
+ROOT_RESPONSE=$(kubectl exec -n ${NAMESPACE} ${POD_NAME} -- node -e "
+const http = require('http');
+http.get('http://localhost:${SERVICE_PORT}/', (res) => {
+  let data = '';
+  res.on('data', chunk => data += chunk);
+  res.on('end', () => {
+    console.log(data);
+    process.exit(res.statusCode === 200 ? 0 : 1);
+  });
+}).on('error', (e) => {
+  console.error(e.message);
+  process.exit(1);
+});
+" 2>&1) || {
+    echo "❌ Root endpoint test failed"
+    exit 1
+}
+
 if [[ ! -z "$ROOT_RESPONSE" ]]; then
     echo "✅ Root endpoint test passed"
 else
