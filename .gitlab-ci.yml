@@ -14,7 +14,7 @@ variables:
 
   # Application configuration
   APP_NAME: "learn-node"
-  DOCKER_REGISTRY: "docker.io"
+  DOCKER_REGISTRY: "ghcr.io"
   DOCKER_REPO: "dxas90"
 
   # Security scanning
