@@ -28,6 +28,7 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/custom-part-of: learn
+  targetNamespace: playground
   sourceRef:
     kind: GitRepository
     name: learn-node

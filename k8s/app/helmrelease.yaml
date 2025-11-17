@@ -4,7 +4,6 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: learn-node
-  namespace: learn-node
 spec:
   interval: 30m
   chart:
@@ -37,19 +36,15 @@ apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
 metadata:
   name: learn-node-imagerepository
-  namespace: learn-node
 spec:
   image: ghcr.io/dxas90/learn-node
   interval: 5m
-  secretRef:
-    name: ghcr-login
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/imagepolicy-image-v1.json
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImagePolicy
 metadata:
   name: learn-node-policy
-  namespace: learn-node
 spec:
   imageRepositoryRef:
     name: learn-node-imagerepository
