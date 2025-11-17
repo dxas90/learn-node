@@ -26,7 +26,7 @@ spec:
     keepHistory: false
   values: # https://github.com/external-secrets/external-secrets/blob/main/deploy/charts/external-secrets/values.yaml
     image:
-    repository: "ghcr.io/dxas90/learn-node"
+      repository: "ghcr.io/dxas90/learn-node"
     env:
       variables:
         VARIABLES_THAT_SHOULD_BE_PRINTED: "LOG_LEVEL EVENT_THRESHOLD NODE_ENV PORT REDIS_DB REDIS_HOST REDIS_PORT STORAGE_DRIVER"
