@@ -35,8 +35,8 @@ const applyMiddleware = (req, res) => {
 const logRequest = req => {
   if (process.env.NODE_ENV !== 'test') {
     const timestamp = new Date().toISOString();
-    console.log(
-      `[${timestamp}] ${req.method} ${req.url} - User-Agent: ${req.headers['user-agent'] || 'Unknown'}`
+    console.debug(
+      `[DEBUG] ${timestamp} ${req.method} ${req.url} - User-Agent: ${req.headers['user-agent'] || 'Unknown'}`
     );
   }
 };
@@ -169,7 +169,7 @@ export const createApp = () => {
         );
       }
     } catch (error) {
-      console.error('Server error:', error);
+      console.error('[ERROR] Server error:', error);
       sendError(res, 500, 'Internal Server Error', error.message);
     }
   });
@@ -179,16 +179,16 @@ const server = createApp();
 
 // Graceful shutdown handling
 const gracefulShutdown = signal => {
-  console.log(`\n${signal} received. Shutting down gracefully...`);
+  console.info(`[INFO] ${signal} received. Shutting down gracefully...`);
 
   server.close(() => {
-    console.log('HTTP server closed.');
+    console.info('[INFO] HTTP server closed.');
     process.exit(0);
   });
 
   // Force close after 10 seconds
   setTimeout(() => {
-    console.error('Could not close connections in time, forcefully shutting down');
+    console.error('[ERROR] Could not close connections in time, forcefully shutting down');
     process.exit(1);
   }, 10000);
 };
@@ -199,21 +199,21 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
 process.on('uncaughtException', error => {
-  console.error('Uncaught Exception:', error);
+  console.error('[ERROR] Uncaught Exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('[ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
 
 // Start server only if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   server.listen(port, hostname, () => {
-    console.log(`🚀 Server running at http://${hostname}:${port}/`);
-    console.log(`📊 Environment: ${appInfo.environment}`);
-    console.log(`📦 Version: ${appInfo.version}`);
-    console.log(`🕐 Started at: ${appInfo.timestamp}`);
+    console.info(`[INFO] 🚀 Server running at http://${hostname}:${port}/`);
+    console.info(`[INFO] 📊 Environment: ${appInfo.environment}`);
+    console.info(`[INFO] 📦 Version: ${appInfo.version}`);
+    console.info(`[INFO] 🕐 Started at: ${appInfo.timestamp}`);
   });
 }
