@@ -1,80 +1,81 @@
-import http from 'http';
-import { URL } from 'url';
-import dotenv from 'dotenv';
+// Unified main server with optional OpenTelemetry + Prometheus metrics
+import http from 'http'
+import { URL } from 'url'
+import { fileURLToPath } from 'url'
+import path from 'path'
 
-// Load environment variables
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-const hostname = process.env.HOST || '0.0.0.0';
-const port = parseInt(process.env.PORT) || 3000;
+const port = Number(process.env.PORT || 3000)
+const hostname = process.env.HOSTNAME || '0.0.0.0'
 
-// Application metadata
+// telemetry and metrics placeholders
+let promClient = null
+let promRegistry = null
+let httpRequestsCounter = null
+let httpRequestDuration = null
+
+// Attempt to load prom-client dynamically
+try {
+  promClient = await import('prom-client')
+  promRegistry = new promClient.Registry()
+  promClient.collectDefaultMetrics({ register: promRegistry })
+  httpRequestsCounter = new promClient.Counter({ name: 'http_requests_total', help: 'Total HTTP requests', labelNames: ['method', 'route', 'status'] })
+  httpRequestDuration = new promClient.Histogram({ name: 'http_request_duration_seconds', help: 'HTTP request duration (s)', labelNames: ['method', 'route', 'status'] })
+  promRegistry.registerMetric(httpRequestsCounter)
+  promRegistry.registerMetric(httpRequestDuration)
+  console.info('[INFO] prom-client metrics enabled')
+} catch (e) {
+  promClient = null
+}
+
+// Optional OpenTelemetry init (best-effort)
+try {
+  const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT
+  if (otelEndpoint) {
+    const { NodeSDK } = await import('@opentelemetry/sdk-node')
+    const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-grpc')
+    const { getNodeAutoInstrumentations } = await import('@opentelemetry/auto-instrumentations-node')
+    const exporter = new OTLPTraceExporter({ url: otelEndpoint })
+    const sdk = new NodeSDK({ traceExporter: exporter, instrumentations: [getNodeAutoInstrumentations()] })
+    await sdk.start()
+    console.info('[INFO] OpenTelemetry SDK started')
+  }
+} catch (e) {
+  console.info('[INFO] OpenTelemetry SDK not started:', e && e.message)
+}
+
+function logRequest(req, status) {
+  const ua = req.headers['user-agent'] || '-'
+  console.info(`[INFO] ${new Date().toISOString()} ${req.method} ${req.url} ${status} - User-Agent: ${ua}`)
+}
+
 const appInfo = {
-  name: 'learn-node',
-  version: process.env.npm_package_version || '1.0.0',
+  version: process.env.VERSION || '0.0.1',
   environment: process.env.NODE_ENV || 'development',
   timestamp: new Date().toISOString()
-};
+}
 
-// Middleware simulation for HTTP server
-const applyMiddleware = (req, res) => {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+function sendSuccess(res, data, statusCode = 200) {
+  res.statusCode = statusCode
+  res.setHeader('Content-Type', 'application/json')
+  res.end(JSON.stringify({ success: true, data, timestamp: new Date().toISOString() }, null, 2))
+}
 
-  // Security headers (helmet-like)
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Content-Security-Policy', 'default-src \'self\'');
-};
+function sendError(res, statusCode = 500, message = 'Internal Error', details = null) {
+  res.statusCode = statusCode
+  res.setHeader('Content-Type', 'application/json')
+  res.end(JSON.stringify({ success: false, message, details, timestamp: new Date().toISOString() }, null, 2))
+}
 
-// Logging middleware
-const logRequest = req => {
-  if (process.env.NODE_ENV !== 'test') {
-    const timestamp = new Date().toISOString();
-    console.info(
-      `[INFO] ${timestamp} ${req.method} ${req.url} - User-Agent: ${req.headers['user-agent'] || 'Unknown'}`
-    );
-  }
-};
+// Lightweight middleware placeholder
+function applyMiddleware(req, res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('X-XSS-Protection', '1; mode=block')
+}
 
-// Error handler
-const sendError = (res, statusCode, message, details = null) => {
-  res.statusCode = statusCode;
-  res.setHeader('Content-Type', 'application/json');
-
-  const errorResponse = {
-    error: true,
-    message,
-    statusCode,
-    timestamp: new Date().toISOString()
-  };
-
-  if (details && process.env.NODE_ENV !== 'production') {
-    errorResponse.details = details;
-  }
-
-  res.end(JSON.stringify(errorResponse, null, 2));
-};
-
-// Success response helper
-const sendSuccess = (res, data, statusCode = 200) => {
-  res.statusCode = statusCode;
-  res.setHeader('Content-Type', 'application/json');
-
-  const response = {
-    success: true,
-    data,
-    timestamp: new Date().toISOString()
-  };
-
-  res.end(JSON.stringify(response, null, 2));
-};
-
-// Route handlers
 const routes = {
   '/': (req, res) => {
     const welcomeData = {
@@ -84,16 +85,17 @@ const routes = {
         { path: '/', method: 'GET', description: 'Welcome message and API info' },
         { path: '/ping', method: 'GET', description: 'Simple ping-pong response' },
         { path: '/healthz', method: 'GET', description: 'Health check endpoint' },
-        { path: '/info', method: 'GET', description: 'Application information' }
+        { path: '/info', method: 'GET', description: 'Application information' },
+        { path: '/metrics', method: 'GET', description: 'Prometheus metrics (if enabled)' }
       ]
-    };
-    sendSuccess(res, welcomeData);
+    }
+    sendSuccess(res, welcomeData)
   },
 
   '/ping': (req, res) => {
-    res.setHeader('Content-Type', 'text/plain');
-    res.statusCode = 200;
-    res.end('pong');
+    res.setHeader('Content-Type', 'text/plain')
+    res.statusCode = 200
+    res.end('pong')
   },
 
   '/healthz': (req, res) => {
@@ -104,8 +106,8 @@ const routes = {
       memory: process.memoryUsage(),
       version: appInfo.version,
       environment: appInfo.environment
-    };
-    sendSuccess(res, healthData);
+    }
+    sendSuccess(res, healthData)
   },
 
   '/info': (req, res) => {
@@ -124,96 +126,77 @@ const routes = {
         port,
         hostname
       }
-    };
-    sendSuccess(res, systemInfo);
-  }
-};
-
-// Create HTTP server
-export const createApp = () => {
-  return http.createServer((req, res) => {
-    try {
-      // Log request
-      logRequest(req);
-
-      // Apply middleware
-      applyMiddleware(req, res);
-
-      // Handle OPTIONS request for CORS
-      if (req.method === 'OPTIONS') {
-        res.statusCode = 204;
-        res.end();
-        return;
-      }
-
-      // Parse URL
-      const urlObj = new URL(req.url, `http://${req.headers.host}`);
-      const pathname = urlObj.pathname;
-
-      // Route handling
-      if (routes[pathname] && req.method === 'GET') {
-        routes[pathname](req, res);
-      } else if (req.method !== 'GET') {
-        sendError(
-          res,
-          405,
-          'Method Not Allowed',
-          `Method ${req.method} is not allowed for this endpoint`
-        );
-      } else {
-        sendError(
-          res,
-          404,
-          'Not Found',
-          `The endpoint ${pathname} does not exist or you are not authorized to view it.`
-        );
-      }
-    } catch (error) {
-      console.error('[ERROR] Server error:', error);
-      sendError(res, 500, 'Internal Server Error', error.message);
     }
-  });
-};
+    sendSuccess(res, systemInfo)
+  }
+}
 
-const server = createApp();
+export const createApp = () => {
+  return http.createServer(async (req, res) => {
+    const start = Date.now()
+    try {
+      // Log request (status will be set after handling)
+      applyMiddleware(req, res)
 
-// Graceful shutdown handling
-const gracefulShutdown = signal => {
-  console.info(`[INFO] ${signal} received. Shutting down gracefully...`);
+      if (req.method === 'OPTIONS') {
+        res.statusCode = 204
+        res.end()
+        return
+      }
 
-  server.close(() => {
-    console.info('[INFO] HTTP server closed.');
-    process.exit(0);
-  });
+      const urlObj = new URL(req.url, `http://${req.headers.host}`)
+      const pathname = urlObj.pathname
 
-  // Force close after 10 seconds
-  setTimeout(() => {
-    console.error('[ERROR] Could not close connections in time, forcefully shutting down');
-    process.exit(1);
-  }, 10000);
-};
+      // metrics endpoint
+      if (req.method === 'GET' && pathname === '/metrics') {
+        if (!promRegistry) {
+          res.writeHead(204)
+          res.end()
+          return
+        }
+        const body = await promRegistry.metrics()
+        res.writeHead(200, { 'Content-Type': promClient.register.contentType })
+        res.end(body)
+        logRequest(req, 200)
+        if (httpRequestsCounter) httpRequestsCounter.inc({ method: req.method, route: pathname, status: 200 })
+        if (httpRequestDuration) httpRequestDuration.observe({ method: req.method, route: pathname, status: 200 }, (Date.now() - start) / 1000)
+        return
+      }
 
-// Handle shutdown signals
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+      if (routes[pathname] && req.method === 'GET') {
+        routes[pathname](req, res)
+        logRequest(req, res.statusCode || 200)
+        if (httpRequestsCounter) httpRequestsCounter.inc({ method: req.method, route: pathname, status: res.statusCode || 200 })
+        if (httpRequestDuration) httpRequestDuration.observe({ method: req.method, route: pathname, status: res.statusCode || 200 }, (Date.now() - start) / 1000)
+        return
+      }
 
-// Handle uncaught exceptions
-process.on('uncaughtException', error => {
-  console.error('[ERROR] Uncaught Exception:', error);
-  process.exit(1);
-});
+      if (req.method !== 'GET') {
+        sendError(res, 405, 'Method Not Allowed', `Method ${req.method} is not allowed for this endpoint`)
+        logRequest(req, 405)
+        return
+      }
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
+      sendError(res, 404, 'Not Found', `The endpoint ${pathname} does not exist`)
+      logRequest(req, 404)
+    } catch (error) {
+      console.error('[ERROR] Server error:', error)
+      sendError(res, 500, 'Internal Server Error', error && error.message)
+      logRequest(req, 500)
+    }
+  })
+}
+
+const server = createApp()
 
 // Start server only if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   server.listen(port, hostname, () => {
-    console.info(`[INFO] 🚀 Server running at http://${hostname}:${port}/`);
-    console.info(`[INFO] 📊 Environment: ${appInfo.environment}`);
-    console.info(`[INFO] 📦 Version: ${appInfo.version}`);
-    console.info(`[INFO] 🕐 Started at: ${appInfo.timestamp}`);
-  });
+    console.info(`[INFO] 🚀 Server running at http://${hostname}:${port}/`)
+    console.info(`[INFO] 📊 Environment: ${appInfo.environment}`)
+    console.info(`[INFO] 📦 Version: ${appInfo.version}`)
+    console.info(`[INFO] 🕐 Started at: ${appInfo.timestamp}`)
+  })
 }
+
+export default createApp
