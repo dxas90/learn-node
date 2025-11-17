@@ -35,8 +35,8 @@ const applyMiddleware = (req, res) => {
 const logRequest = req => {
   if (process.env.NODE_ENV !== 'test') {
     const timestamp = new Date().toISOString();
-    console.debug(
-      `[DEBUG] ${timestamp} ${req.method} ${req.url} - User-Agent: ${req.headers['user-agent'] || 'Unknown'}`
+    console.info(
+      `[INFO] ${timestamp} ${req.method} ${req.url} - User-Agent: ${req.headers['user-agent'] || 'Unknown'}`
     );
   }
 };
