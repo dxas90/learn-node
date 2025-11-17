@@ -47,7 +47,6 @@ spec:
   values: # https://github.com/external-secrets/external-secrets/blob/main/deploy/charts/external-secrets/values.yaml
     image:
     repository: "ghcr.io/dxas90/learn-node"
-    pullPolicy: "Always"
     env:
       variables:
         VARIABLES_THAT_SHOULD_BE_PRINTED: "LOG_LEVEL EVENT_THRESHOLD NODE_ENV PORT REDIS_DB REDIS_HOST REDIS_PORT STORAGE_DRIVER"
@@ -77,76 +76,3 @@ spec:
     semver:
       range: 0.1.x
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/imageupdateautomation-image-v1.json
-apiVersion: image.toolkit.fluxcd.io/v1
-kind: ImageUpdateAutomation
-metadata:
-  name: learn-node-update
-  namespace: learn-go
-spec:
-  interval: 1m0s
-  sourceRef:
-    kind: GitRepository
-    name: learn-node
-    namespace: flux-system
-  git:
-    checkout:
-      ref:
-        branch: main
-      strategy: pull-request
-    commit:
-      author:
-        email: fluxcdbot@users.noreply.github.com
-        name: fluxcdbot
-        messageTemplate: |
-          Automated image update
-
-          Automation name: {{ .AutomationObject }}
-
-          Files:
-          {{ range $filename, $_ := .Changed.FileChanges -}}
-          - {{ $filename }}
-          {{ end -}}
-
-          Objects:
-          {{ range $resource, $changes := .Changed.Objects -}}
-          - {{ $resource.Kind }} {{ $resource.Name }}
-            Changes:
-          {{- range $_, $change := $changes }}
-              - {{ $change.OldValue }} -> {{ $change.NewValue }}
-          {{ end -}}
-          {{ end -}}
-    push:
-      branch: flux-image-updates
-      refspec: refs/heads/flux-image-updates:refs/heads/flux-image-updates
-  update:
-    path: ./
----
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/receiver-notification-v1.json
-# kubectl -n learn-node get receiver github-webhook-learn-node --output=jsonpath='{.status.webhookPath}'
-apiVersion: notification.toolkit.fluxcd.io/v1
-kind: Receiver
-metadata:
-  name: github-webhook-learn-node
-  namespace: learn-node
-spec:
-  type: github
-  events:
-    - "push"
-    - "pull_request"
-    - "ping"
-  secretRef:
-    name: github-webhook-token-secret-learn-node
-  resources:
-    - apiVersion: source.toolkit.fluxcd.io/v1
-      kind: GitRepository
-      name: learn-node
-      namespace: flux-system
-    - apiVersion: helm.toolkit.fluxcd.io/v2
-      kind: HelmRelease
-      name: learn-node
-      namespace: learn-node
-    - apiVersion: image.toolkit.fluxcd.io/v1
-      kind: ImageRepository
-      name: learn-node-imagerepository
-      namespace: learn-node
