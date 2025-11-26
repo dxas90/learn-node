@@ -111,7 +111,7 @@ jobs:
         continue-on-error: true
 
       - name: Run Helm unit tests
-        run: helm unittest k8s/learn-node --color --output-type JUnit --output-file helm-test-results.xml
+        run: helm unittest k8s/learn-node --output-type JUnit --output-file helm-test-results.xml
 
       - name: Publish Helm Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
