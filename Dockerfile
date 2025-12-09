@@ -2,9 +2,11 @@
 FROM node:24-alpine AS base
 
 # Install security updates and create non-root user
-RUN apk update && apk upgrade && \
-    apk add --no-cache dumb-init && \
-    addgroup -g 1001 -S nodejs && \
+RUN apk update && apk upgrade --no-cache
+
+RUN apk add --no-cache dumb-init
+
+RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 # Set working directory
