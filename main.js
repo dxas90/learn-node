@@ -86,6 +86,8 @@ const routes = {
         { path: '/ping', method: 'GET', description: 'Simple ping-pong response' },
         { path: '/healthz', method: 'GET', description: 'Health check endpoint' },
         { path: '/info', method: 'GET', description: 'Application information' },
+        { path: '/version', method: 'GET', description: 'Application version information' },
+        { path: '/echo', method: 'POST', description: 'Echo back the request body' },
         { path: '/metrics', method: 'GET', description: 'Prometheus metrics (if enabled)' }
       ]
     }
@@ -128,6 +130,15 @@ const routes = {
       }
     }
     sendSuccess(res, systemInfo)
+  },
+
+  '/version': (req, res) => {
+    const versionData = {
+      version: appInfo.version,
+      name: 'learn-node',
+      environment: appInfo.environment
+    }
+    sendSuccess(res, versionData)
   }
 }
 
@@ -168,6 +179,30 @@ export const createApp = () => {
         logRequest(req, res.statusCode || 200)
         if (httpRequestsCounter) httpRequestsCounter.inc({ method: req.method, route: pathname, status: res.statusCode || 200 })
         if (httpRequestDuration) httpRequestDuration.observe({ method: req.method, route: pathname, status: res.statusCode || 200 }, (Date.now() - start) / 1000)
+        return
+      }
+
+      // Handle POST /echo
+      if (req.method === 'POST' && pathname === '/echo') {
+        let body = ''
+        req.on('data', chunk => { body += chunk.toString() })
+        req.on('end', () => {
+          try {
+            const parsed = JSON.parse(body)
+            const echoData = {
+              received: parsed,
+              timestamp: new Date().toISOString(),
+              message: 'Echo successful'
+            }
+            sendSuccess(res, echoData)
+            logRequest(req, 200)
+            if (httpRequestsCounter) httpRequestsCounter.inc({ method: req.method, route: pathname, status: 200 })
+            if (httpRequestDuration) httpRequestDuration.observe({ method: req.method, route: pathname, status: 200 }, (Date.now() - start) / 1000)
+          } catch (err) {
+            sendError(res, 400, 'Bad Request', 'Invalid JSON in request body')
+            logRequest(req, 400)
+          }
+        })
         return
       }
 
