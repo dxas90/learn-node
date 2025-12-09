@@ -1,12 +1,11 @@
 # Multi-stage build for optimization
-FROM node:24-alpine AS base
+# Using node:24-alpine3.20 to avoid Alpine 3.21 multi-arch build issues
+FROM node:24-alpine3.20 AS base
 
 # Install security updates and create non-root user
-RUN apk update && apk upgrade --no-cache
-
-RUN apk add --no-cache dumb-init
-
-RUN addgroup -g 1001 -S nodejs && \
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache dumb-init && \
+    addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 # Set working directory
