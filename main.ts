@@ -4,7 +4,7 @@ import { URL } from 'url';
 import type * as PromClient from 'prom-client';
 
 const port = Number(process.env.PORT || 3000);
-const hostname = process.env.HOSTNAME || '0.0.0.0';
+const hostname = process.env.HOST || '0.0.0.0';
 
 // TypeScript interfaces
 interface AppInfo {
