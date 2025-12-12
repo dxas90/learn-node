@@ -17,11 +17,9 @@ docker-compose.yml
 k8s/
 .*.yml
 
-# TypeScript source files (only use compiled JS in production)
-*.ts
-!*.d.ts
-
-# Build artifacts
+# Build artifacts (builder stage will recreate these)
 dist/
 coverage/
+
+# Don't include node_modules in build context (npm ci will install them)
 node_modules/
