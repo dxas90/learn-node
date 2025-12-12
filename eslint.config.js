@@ -1,11 +1,21 @@
 import js from '@eslint/js';
+import tseslint from '@typescript-eslint/eslint-plugin';
+import tsparser from '@typescript-eslint/parser';
 
 export default [
+  {
+    ignores: ['node_modules/**', 'coverage/**', 'dist/**', '*.min.js'],
+  },
   js.configs.recommended,
   {
+    files: ['**/*.ts'],
     languageOptions: {
+      parser: tsparser,
       ecmaVersion: 2024,
       sourceType: 'module',
+      parserOptions: {
+        project: './tsconfig.json',
+      },
       globals: {
         console: 'readonly',
         process: 'readonly',
@@ -17,17 +27,13 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
-        jest: 'readonly',
-        describe: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly'
-      }
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
     },
     rules: {
+      ...tseslint.configs.recommended.rules,
       // Best Practices
       'no-console': 'warn',
       'no-debugger': 'error',
@@ -38,12 +44,14 @@ export default [
       'no-script-url': 'error',
 
       // Variables
-      'no-undef': 'error',
-      'no-unused-vars': [
+      'no-undef': 'off', // TypeScript handles this
+      'no-unused-vars': 'off', // Use TypeScript version
+      '@typescript-eslint/no-unused-vars': [
         'error',
         {
           argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_'
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_'
         }
       ],
       'no-use-before-define': 'error',
@@ -64,24 +72,22 @@ export default [
 
       // Node.js specific
       'no-process-exit': 'error',
-      'handle-callback-err': 'error'
+      'handle-callback-err': 'error',
     },
-    files: ['**/*.js'],
-    ignores: ['node_modules/**', 'coverage/**', 'dist/**', '*.min.js']
   },
   {
     // Test files specific configuration
-    files: ['**/*.test.js', '**/*.spec.js', '**/jest.setup.js'],
+    files: ['**/*.test.ts', '**/*.spec.ts'],
     rules: {
-      'no-console': 'off' // Allow console in tests
-    }
+      'no-console': 'off', // Allow console in tests
+    },
   },
   {
     // Main application file - allow process.exit for graceful shutdown
-    files: ['main.js'],
+    files: ['main.ts'],
     rules: {
       'no-process-exit': 'off',
-      'no-console': 'off' // Main file needs console for server logs
-    }
-  }
+      'no-console': 'off', // Main file needs console for server logs
+    },
+  },
 ];

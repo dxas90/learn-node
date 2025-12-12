@@ -23,6 +23,13 @@ USER nodejs
 EXPOSE 3000
 CMD ["dumb-init", "npm", "run", "dev"]
 
+# Build stage for TypeScript compilation
+FROM base AS builder
+ENV NODE_ENV=development
+RUN npm ci --include=dev
+COPY . .
+RUN npm run build
+
 # Production dependencies stage
 FROM base AS deps
 ENV NODE_ENV=production
@@ -39,8 +46,8 @@ ENV HOST=0.0.0.0
 # Copy production dependencies
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 
-# Copy application files
-COPY --chown=nodejs:nodejs ./main.js ./main.js
+# Copy compiled JavaScript from builder
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --chown=nodejs:nodejs ./package.json ./package.json
 
 # Create .env file with defaults
@@ -57,7 +64,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 EXPOSE 3000
 
 # Use dumb-init for proper signal handling
-CMD ["dumb-init", "node", "main.js"]
+CMD ["dumb-init", "node", "dist/main.js"]
 
 # Build arguments for metadata
 ARG BUILD_DATE

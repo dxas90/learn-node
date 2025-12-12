@@ -1,8 +1,8 @@
 {
-  "watch": ["main.js"],
-  "ext": "js,json",
-  "ignore": ["node_modules/", "coverage/", "*.test.js"],
-  "exec": "node main.js",
+  "watch": ["*.ts"],
+  "ext": "ts,json",
+  "ignore": ["node_modules/", "coverage/", "dist/", "*.test.ts"],
+  "exec": "tsx main.ts",
   "env": {
     "NODE_ENV": "development"
   },

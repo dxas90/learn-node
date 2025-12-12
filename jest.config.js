@@ -2,6 +2,13 @@ export default {
   // Test environment
   testEnvironment: 'node',
 
+  // Use ts-jest preset for TypeScript support
+  preset: 'ts-jest/presets/default-esm',
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+
   // Automatically clear mock calls and instances between every test
   clearMocks: true,
 
@@ -38,16 +45,17 @@ export default {
 
   // Coverage collection from these files
   collectCoverageFrom: [
-    '*.js',
+    '*.ts',
     '!jest.config.js',
     '!jest.setup.js',
     '!eslint.config.js',
     '!coverage/**',
-    '!node_modules/**'
+    '!node_modules/**',
+    '!dist/**'
   ],
 
   // Ignore patterns
-  testPathIgnorePatterns: ['/node_modules/', '/coverage/'],
+  testPathIgnorePatterns: ['/node_modules/', '/coverage/', '/dist/'],
 
   // Module file extensions
   moduleFileExtensions: ['js', 'json'],
