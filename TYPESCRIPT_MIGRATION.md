@@ -32,7 +32,7 @@ This project has been successfully migrated from vanilla JavaScript to TypeScrip
 - `typescript@^5.7.2` - TypeScript compiler
 - `@types/node@^22.10.1` - Node.js type definitions
 
-### Testing
+### Testing suite
 
 - `@types/jest@^29.5.14` - Jest type definitions
 - `@types/supertest@^6.0.2` - Supertest type definitions
@@ -151,6 +151,7 @@ npm run docker:run    # Run production container
 ## Troubleshooting
 
 ### Build Errors
+
 ```bash
 npm run type-check  # See detailed type errors
 ```
@@ -158,6 +159,7 @@ npm run type-check  # See detailed type errors
 ### Test Failures
 
 Tests now run with TypeScript support. If tests fail:
+
 ```bash
 npm run build       # Ensure clean build
 npm test            # Run tests
