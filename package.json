@@ -9,7 +9,7 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node node_modules/typescript7/bin/tsc",
     "start": "node dist/main.js",
     "dev": "tsx main.ts",
     "dev:watch": "nodemon",
@@ -19,7 +19,7 @@
     "lint": "eslint *.ts",
     "lint:fix": "eslint *.ts --fix",
     "format": "prettier --write '*.ts'",
-    "type-check": "tsc --noEmit",
+    "type-check": "node node_modules/typescript7/bin/tsc --noEmit",
     "docker:build": "docker build -t learn-node .",
     "docker:run": "docker run -p 3000:3000 learn-node",
     "k8s:deploy": "kubectl apply -f k8s/",
@@ -53,6 +53,7 @@
     "@types/supertest": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
+    "@typescript/typescript6": "^6.0.2",
     "eslint": "^10.0.0",
     "jest": "^30.0.0",
     "nodemon": "^3.0.2",
@@ -61,7 +62,8 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript7": "npm:typescript@^7.0.0"
   },
   "repository": {
     "type": "git",
