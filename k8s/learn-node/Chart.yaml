@@ -4,5 +4,14 @@ description: "Helm chart for node"
 type: application
 version: "0.1.30" # {"$imagepolicy": "learn-node:learn-node-api-policy:tag"}
 appVersion: "0.1.30" # {"$imagepolicy": "learn-node:learn-node-api-policy:tag"}
+icon: "https://nodejs.org/static/images/logos/nodejs-new-pantone-black.svg"
+home: "https://github.com/dxas90/learn-node"
+sources:
+  - "https://github.com/dxas90/learn-node"
+keywords:
+  - node
+  - nodejs
+  - api
+  - kubernetes
 maintainers:
   - name: "Daniel Ramirez <dxas90@gmail.com>"
