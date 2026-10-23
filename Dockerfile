@@ -1,9 +1,9 @@
 # Multi-stage build for optimization
-# Build/dev stages use the full node:24-alpine image (includes npm).
+# Build/dev stages use the full node:26-alpine image (includes npm).
 # Production stage uses a minimal runtime image without npm/corepack to
 # eliminate CVEs that live in npm's bundled binaries (tar, sigstore, etc.).
 
-FROM node:24-alpine3.21 AS base
+FROM node:26-alpine3.24 AS base
 
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache dumb-init && \
@@ -42,14 +42,14 @@ RUN npm ci --omit=dev && \
            /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 # Production runtime stage (no npm, no corepack, no yarn)
-FROM alpine:3.21 AS production
+FROM alpine:3.24 AS production
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
 RUN apk update && apk upgrade --no-cache && \
-    apk add --no-cache nodejs dumb-init tzdata ca-certificates && \
+    apk add --no-cache nodejs-current dumb-init tzdata ca-certificates && \
     addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
