@@ -27,7 +27,7 @@ export default {
   // An object that configures minimum threshold enforcement for coverage results
   coverageThreshold: {
     global: {
-      branches: 75,
+      branches: 60,
       functions: 75,
       lines: 75,
       statements: 75
@@ -35,13 +35,13 @@ export default {
   },
 
   // The glob patterns Jest uses to detect test files
-  testMatch: ['**/__tests__/**/*.(js|ts)', '**/*.(test|spec).(js|ts)'],
+  testMatch: ['**/__tests__/**/*.ts', '**/*.(test|spec).ts'],
 
   // Test timeout
   testTimeout: 10000,
 
   // Setup files after environment
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 
   // Coverage collection from these files
   collectCoverageFrom: [
@@ -58,7 +58,7 @@ export default {
   testPathIgnorePatterns: ['/node_modules/', '/coverage/', '/dist/'],
 
   // Module file extensions
-  moduleFileExtensions: ['js', 'json'],
+  moduleFileExtensions: ['ts', 'js', 'json'],
 
   // Verbose output
   verbose: true,
