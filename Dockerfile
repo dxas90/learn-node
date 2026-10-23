@@ -1,17 +1,17 @@
 # Multi-stage build for optimization
-# Using node:24-alpine3.20 to avoid Alpine 3.21 multi-arch build issues
-FROM node:24-alpine3.20 AS base
+# Build/dev stages use the full node:24-alpine image (includes npm).
+# Production stage uses a minimal runtime image without npm/corepack to
+# eliminate CVEs that live in npm's bundled binaries (tar, sigstore, etc.).
 
-# Install security updates and create non-root user
+FROM node:24-alpine3.21 AS base
+
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache dumb-init && \
     addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files for dependency installation
 COPY package*.json ./
 
 # Development stage
@@ -33,17 +33,29 @@ RUN npm run build
 # Production dependencies stage
 FROM base AS deps
 ENV NODE_ENV=production
-RUN npm ci --only=production && \
-    npm cache clean --force
+RUN npm ci --omit=dev && \
+    npm cache clean --force && \
+    # Delete npm itself so the runtime image doesn't ship with CVEs
+    # found in npm's bundled binaries (tar, sigstore, pacote, etc.).
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+           /usr/local/lib/node_modules/corepack /usr/local/bin/corepack \
+           /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
-# Production stage
-FROM base AS production
+# Production runtime stage (no npm, no corepack, no yarn)
+FROM alpine:3.21 AS production
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-# Copy production dependencies
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache nodejs dumb-init tzdata ca-certificates && \
+    addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy production dependencies (npm already stripped in deps stage)
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 
 # Copy compiled JavaScript from builder
@@ -51,27 +63,22 @@ COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --chown=nodejs:nodejs ./package.json ./package.json
 
 # Create .env file with defaults
-RUN echo "NODE_ENV=production\nPORT=3000\nHOST=0.0.0.0" > .env
+RUN printf 'NODE_ENV=production\nPORT=3000\nHOST=0.0.0.0\n' > .env && \
+    chown nodejs:nodejs .env
 
-# Switch to non-root user
 USER nodejs
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 
-# Expose port
 EXPOSE 3000
 
-# Use dumb-init for proper signal handling
 CMD ["dumb-init", "node", "dist/main.js"]
 
-# Build arguments for metadata
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
 
-# Add labels for metadata
 LABEL maintainer="Daniel Ramirez <daniel@example.com>" \
       org.label-schema.name="learn-node" \
       org.label-schema.description="A modern Node.js microservice for learning containerization" \
