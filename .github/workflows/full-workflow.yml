@@ -70,7 +70,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         continue-on-error: true  # codecov is optional; don't block CI
         with:
           files: ./coverage/lcov.info
