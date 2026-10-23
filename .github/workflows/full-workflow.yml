@@ -182,7 +182,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          load: ${{ github.event_name == 'pull_request' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -234,8 +235,10 @@ jobs:
 
       - name: Load Docker image into Kind
         run: |
-          # Load image into Kind cluster
-          docker pull --platform linux/amd64 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${GITHUB_SHA::7}
+          # PR builds are loaded locally; push builds are pulled from GHCR.
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            docker pull --platform linux/amd64 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${GITHUB_SHA::7}
+          fi
           kind load docker-image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${GITHUB_SHA::7} --name ${{ env.CLUSTER_NAME }}
 
       - name: Wait for cluster to be ready
