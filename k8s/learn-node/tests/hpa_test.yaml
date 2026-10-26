@@ -45,3 +45,17 @@ tests:
       - equal:
           path: spec.scaleTargetRef.name
           value: RELEASE-NAME-learn-node
+
+  - it: should set CPU utilization metric
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - equal:
+          path: spec.metrics[0].type
+          value: Resource
+      - equal:
+          path: spec.metrics[0].resource.name
+          value: cpu
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 80
