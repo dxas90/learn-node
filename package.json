@@ -38,7 +38,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@opentelemetry/api": "^1.10.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.82.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.83.0",
     "@opentelemetry/exporter-trace-otlp-grpc": "^0.300.0",
     "@opentelemetry/sdk-node": "^0.300.0",
     "cors": "^2.8.5",
